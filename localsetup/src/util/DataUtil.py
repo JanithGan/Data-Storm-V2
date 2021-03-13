@@ -1,5 +1,7 @@
 import pandas as pd
 from imblearn.over_sampling import SMOTENC
+from imblearn.under_sampling import OneSidedSelection
+from imblearn.combine import SMOTEENN
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import f1_score
@@ -21,6 +23,8 @@ class DataUtil:
         self.drop_data = columns[0]
         self.cat_data = columns[1]
         self.num_data = columns[2]
+        self.estimators = 0
+        self.y_test = []
 
     # Converts datetime information into meaningful columns
     @staticmethod
@@ -77,23 +81,39 @@ class DataUtil:
 
         # Up-sampling data using SMOTE-NC
         cat_index = range(8, len(self.x_train.columns))
-        sm = SMOTENC(categorical_features=cat_index, random_state=0)
+        sm = SMOTENC(categorical_features=cat_index, random_state=10, k_neighbors=4, sampling_strategy='not majority')
         self.x_train_res, self.y_train_res = sm.fit_resample(np.array(self.x_train), np.array(self.y_train))
 
+    # Under samples data
+    def under_sample(self):
+
+        # Down-sampling data using SMOTE-NC
+        undersample = OneSidedSelection(n_neighbors=1, n_seeds_S=200)
+        self.x_train_res, self.y_train_res = undersample.fit_resample(np.array(self.x_train), np.array(self.y_train))
+
+    # Smote tomak
+    def combined_sample(self):
+
+        smt = SMOTEENN()
+        # sm = SMOTENC(categorical_features=cat_index, random_state=0)
+        self.x_train_res, self.y_train_res = smt.fit_resample(np.array(self.x_train), np.array(self.y_train))
+
     # Trains a model
-    def model_train(self, model, estimators):
+    def model_train(self, model):
 
         if model == 'Random Forest':
-            _classifier = RandomForestClassifier(n_estimators=estimators)
+            _classifier = RandomForestClassifier(n_estimators=self.estimators)
             _classifier.fit(self.x_train_res, self.y_train_res)
             score = _classifier.score(self.x_val, self.y_val)
+            self.train_results = []
             self.train_results.append(_classifier)
             self.train_results.append(score)
 
         elif model == 'XG Boost':
-            _classifier = XGBClassifier(n_estimators=estimators)
+            _classifier = XGBClassifier(n_estimators=self.estimators, max_depth=5, reg_alpha=0.4)
             _classifier.fit(np.array(self.x_train_res), np.array(self.y_train_res))
             score = _classifier.score(np.array(self.x_val), np.array(self.y_val))
+            self.train_results = []
             self.train_results.append(_classifier)
             self.train_results.append(score)
 
@@ -107,3 +127,5 @@ class DataUtil:
         # Display output
         print("F1 score :", f1)
         print("Accuracy :", accuracy)
+
+        self.y_test = classifier.predict(np.array(self.x_test))
