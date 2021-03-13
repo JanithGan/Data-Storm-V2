@@ -3,7 +3,7 @@
 import pandas as pd
 from scipy.stats import chi2_contingency
 
-TrainData = pd.read_csv("/Users/harindujayarathne/PycharmProjects/Data-Storm-V2/Data/Hotel-A-train.csv")
+TrainData = pd.read_csv("/Data/Hotel-A-train.csv")
 Cols = TrainData.columns
 det_cols = Cols.to_list()
 det_cols.remove('Reservation-id')
